@@ -1,0 +1,190 @@
+--First, use a WITH statement to replace the missing data in the product_id column in order_items_vintage with ‘P012’.
+--Then, show all revenue for the Vintage product “Vintage Nike Air Max 1”.
+
+WITH new_table AS (
+SELECT 
+	*
+	, COALESCE (product_id, 'P012') AS new_product_id 
+FROM order_items_vintage
+) 
+
+SELECT 
+	ps.product_name
+	, SUM(nt.sale_price) AS total_revenue 
+FROM new_table nt 
+INNER JOIN products ps ON nt.new_product_id = ps.product_id
+WHERE 1=1 
+	AND ps.product_name = 'Vintage Nike Air Max 1'
+GROUP BY ps.product_name
+
+
+with new_tbl as(
+ select
+   *
+   , case
+     when product_id is null then 'P012'
+     else product_id
+    end as new_prod_id
+ from order_items_vintage
+)
+
+select
+ ps.product_name
+  , sum(nt.sale_price) as total_revenue
+from new_tbl nt
+ inner join products ps on nt.new_prod_id = ps.product_id
+where 1=1
+ and ps.product_name = 'Vintage Nike Air Max 1'
+group by
+ ps.product_name;
+
+
+--First, use WITH to replace the NULLs in the product_id column in order_items with ‘P003’.
+--Then, show the product name, and revenue for product_ids P001-P003 by customer age_group in ascending order.
+
+--HINT: “Customer_id” in the customers table  = “user_id” in other tables 
+
+WITH new_table AS (
+	SELECT 
+  	*
+    	, COALESCE (product_id, 'P003') as new_product_id
+  FROM order_items
+)
+
+SELECT 
+	ct.age_group
+  , pr.product_name 
+  , SUM (nt.sale_price) 
+FROM new_table nt 
+INNER JOIN products pr ON nt.new_product_id = pr.product_id
+INNER JOIN customers ct ON nt.user_id = ct.customer_id
+WHERE 1=1 
+	AND pr.product_id IN ('P001', 'P002', 'P003')
+GROUP BY pr.product_name 
+  , ct.age_group
+ORDER BY 1
+
+
+-- Can you clean the data and show the % of revenue from repeat customers and new customers for the vintage business?
+-- Hint: replace product_id NULLs with P012 for order_items_vintage
+
+with new_tbl as (
+  select
+    user_id
+    , count(order_id) as total_orders
+    , sum(sale_price) as total_revenue
+  from order_items_vintage
+  group by
+    user_id
+)
+
+select
+ case
+   when total_orders = 1 then 'new customer'
+    when total_orders > 1 then 'repeat customer'
+   else 'other'
+  end as customer_type
+  , sum(total_revenue) as total_revenue
+  , count(user_id) as total_users
+from new_tbl
+group by
+ case
+   when total_orders = 1 then 'new customer'
+    when total_orders > 1 then 'repeat customer'
+   else 'other'
+  end;
+  
+WITH order_items_vintage_cleaned AS(
+  SELECT 
+ user_id AS customer_id,
+    CASE
+   WHEN product_id IS NULL THEN 'P012'
+  ELSE product_id
+  END AS product_id_clean,
+  SUM(sale_price) AS revenue,
+  COUNT(user_id) as number_orders
+  FROM order_items_vintage
+  GROUP BY 1, 2
+  )
+  
+ SELECT CASE WHEN vintage.number_orders >= 2 THEN 'repeat'
+  ELSE 'one-time'
+  END as repeat_or_onetime_customer,
+  SUM(vintage.revenue) AS total_revenue
+FROM order_items_vintage_cleaned as vintage
+GROUP BY 1
+
+
+WITH my_table AS (
+	SELECT *
+  FROM customers
+ 		WHERE fav_tennis_player = 'Novak Djokovic'
+)
+
+SELECT 
+	COUNT (customer_id) 
+  , age_group
+FROM my_table
+	GROUP BY age_group
+ 
+WITH nt AS (
+SELECT 
+	user_id
+  , SUM (sale_price) as total_revenue
+  , COUNT (DISTINCT product_id) AS total_products
+FROM order_items
+GROUP BY user_id
+)
+
+SELECT 
+	 SUM (total_revenue)
+FROM nt
+WHERE total_orders >= 2
+
+--for all NIKE 
+WITH combine_table AS (
+  SELECT * FROM order_items
+  UNION ALL 
+  SELECT * FROM order_items_vintage
+), 
+
+pro_table AS (
+SELECT 
+	user_id
+  , SUM (sale_price) as total_revenue
+  , COUNT (DISTINCT product_id) AS total_products
+FROM combine_table
+GROUP BY user_id  
+)
+
+SELECT 
+	 SUM (total_revenue)
+FROM pro_table
+WHERE total_products >= 2
+
+
+
+SELECT 
+ COUNT (*) AS total_orders 
+FROM orders
+WHERE created_at = (SELECT MAX(created_at) FROM orders)
+--GROUP BY created_at 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
